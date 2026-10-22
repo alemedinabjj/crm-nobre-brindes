@@ -1,4 +1,12 @@
-import { funnelPosition, isFinalStage, STAGE_LABELS, type Stage } from './stage.js';
+import type { RuleViolation } from './rule-violation.js';
+import {
+  funnelPosition,
+  isFinalStage,
+  STAGE_LABELS,
+  type Stage,
+} from './stage.js';
+
+export type { RuleViolation, ViolationCode } from './rule-violation.js';
 
 /**
  * Mapa de transições permitidas. É a única fonte de verdade sobre "de onde
@@ -37,23 +45,12 @@ export type TransitionRequest = {
 
 export type TransitionKind = 'FORWARD' | 'BACKWARD' | 'LOSS';
 
-export type ViolationCode =
-  | 'SAME_STAGE'
-  | 'FROM_FINAL_STAGE'
-  | 'TRANSITION_NOT_ALLOWED'
-  | 'MISSING_ESTIMATED_VALUE'
-  | 'MISSING_ITEMS'
-  | 'MISSING_PROPOSAL_VALIDITY'
-  | 'MISSING_LOSS_REASON'
-  | 'MISSING_BACKWARD_REASON';
-
-export type RuleViolation = { code: ViolationCode; message: string };
-
 export type TransitionResult =
   | { ok: true; kind: TransitionKind }
   | { ok: false; violations: RuleViolation[] };
 
-export const allowedTargets = (from: Stage): readonly Stage[] => ALLOWED_TRANSITIONS[from];
+export const allowedTargets = (from: Stage): readonly Stage[] =>
+  ALLOWED_TRANSITIONS[from];
 
 const hasText = (value: string | null | undefined): boolean =>
   typeof value === 'string' && value.trim().length > 0;
@@ -92,7 +89,10 @@ export const checkStageInvariants = (
     }
   }
 
-  if (position >= funnelPosition('FOLLOW_UP') && data.proposalValidUntil === null) {
+  if (
+    position >= funnelPosition('FOLLOW_UP') &&
+    data.proposalValidUntil === null
+  ) {
     violations.push({
       code: 'MISSING_PROPOSAL_VALIDITY',
       message: 'Informe a validade da proposta enviada ao cliente.',
@@ -112,7 +112,12 @@ export const evaluateTransition = (
   if (from === to) {
     return {
       ok: false,
-      violations: [{ code: 'SAME_STAGE', message: `A oportunidade já está em ${STAGE_LABELS[to]}.` }],
+      violations: [
+        {
+          code: 'SAME_STAGE',
+          message: `A oportunidade já está em ${STAGE_LABELS[to]}.`,
+        },
+      ],
     };
   }
 
@@ -129,7 +134,9 @@ export const evaluateTransition = (
   }
 
   if (!ALLOWED_TRANSITIONS[from].includes(to)) {
-    const options = ALLOWED_TRANSITIONS[from].map((stage) => STAGE_LABELS[stage]).join(', ');
+    const options = ALLOWED_TRANSITIONS[from]
+      .map((stage) => STAGE_LABELS[stage])
+      .join(', ');
     return {
       ok: false,
       violations: [
@@ -145,7 +152,10 @@ export const evaluateTransition = (
   const violations = checkStageInvariants(to, subject);
 
   if (kind === 'LOSS' && !hasText(reason)) {
-    violations.push({ code: 'MISSING_LOSS_REASON', message: 'Informe o motivo da perda.' });
+    violations.push({
+      code: 'MISSING_LOSS_REASON',
+      message: 'Informe o motivo da perda.',
+    });
   }
   if (kind === 'BACKWARD' && !hasText(reason)) {
     violations.push({

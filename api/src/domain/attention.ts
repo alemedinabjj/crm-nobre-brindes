@@ -23,7 +23,11 @@ export type AttentionCode =
   | 'EVENT_IMMINENT'
   | 'EVENT_APPROACHING';
 
-export type AttentionSignal = { code: AttentionCode; severity: Severity; message: string };
+export type AttentionSignal = {
+  code: AttentionCode;
+  severity: Severity;
+  message: string;
+};
 
 export type AttentionAssessment = {
   level: AttentionLevel;
@@ -66,7 +70,11 @@ export const DEFAULT_ATTENTION_POLICY: AttentionPolicy = {
 
 const SEVERITY_WEIGHT: Record<Severity, number> = { critical: 10, warning: 3 };
 
-const PROPOSAL_STAGES: readonly Stage[] = ['APRESENTACAO_ORCAMENTO', 'FOLLOW_UP', 'FORECAST'];
+const PROPOSAL_STAGES: readonly Stage[] = [
+  'APRESENTACAO_ORCAMENTO',
+  'FOLLOW_UP',
+  'FORECAST',
+];
 
 const plural = (count: number, singular: string, pluralForm: string): string =>
   `${count} ${count === 1 ? singular : pluralForm}`;
@@ -116,13 +124,20 @@ const proposalSignal = (
     return {
       code: 'PROPOSAL_EXPIRING',
       severity: 'warning',
-      message: daysLeft === 0 ? 'Proposta vence hoje.' : `Proposta vence em ${plural(daysLeft, 'dia', 'dias')}.`,
+      message:
+        daysLeft === 0
+          ? 'Proposta vence hoje.'
+          : `Proposta vence em ${plural(daysLeft, 'dia', 'dias')}.`,
     };
   }
   return null;
 };
 
-const eventSignal = (eventDate: Date | null, today: Date, policy: AttentionPolicy): AttentionSignal | null => {
+const eventSignal = (
+  eventDate: Date | null,
+  today: Date,
+  policy: AttentionPolicy,
+): AttentionSignal | null => {
   if (eventDate === null) return null;
 
   const daysLeft = daysBetween(today, eventDate);
@@ -130,7 +145,8 @@ const eventSignal = (eventDate: Date | null, today: Date, policy: AttentionPolic
     return {
       code: 'EVENT_PASSED',
       severity: 'critical',
-      message: 'O evento do cliente já passou. Confirme se ainda há venda ou marque como perdida.',
+      message:
+        'O evento do cliente já passou. Confirme se ainda há venda ou marque como perdida.',
     };
   }
   if (daysLeft <= policy.eventCriticalWithinDays) {
@@ -164,8 +180,13 @@ export const assessAttention = (
     eventSignal(input.clientEventDate, today, policy),
   ].filter((signal): signal is AttentionSignal => signal !== null);
 
-  const score = signals.reduce((total, signal) => total + SEVERITY_WEIGHT[signal.severity], 0);
-  const level: AttentionLevel = signals.some((signal) => signal.severity === 'critical')
+  const score = signals.reduce(
+    (total, signal) => total + SEVERITY_WEIGHT[signal.severity],
+    0,
+  );
+  const level: AttentionLevel = signals.some(
+    (signal) => signal.severity === 'critical',
+  )
     ? 'critical'
     : signals.length > 0
       ? 'warning'

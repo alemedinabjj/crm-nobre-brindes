@@ -6,6 +6,7 @@ import {
   integer,
   numeric,
   pgEnum,
+  pgSequence,
   pgTable,
   text,
   timestamp,
@@ -15,6 +16,11 @@ import {
 import { STAGES } from '../domain/stage.js';
 
 export const stageEnum = pgEnum('stage', STAGES);
+
+/** Numeração sequencial dos códigos OPP-XXXX, continuando após a carga do case. */
+export const opportunityCodeSequence = pgSequence('opportunity_code_seq', {
+  startWith: 2008,
+});
 
 /**
  * As regras de transição vivem no domínio (src/domain). O banco repete as
@@ -29,15 +35,26 @@ export const opportunities = pgTable(
     companyName: varchar('company_name', { length: 160 }).notNull(),
     sellerName: varchar('seller_name', { length: 80 }).notNull(),
     // Nulo enquanto o lead não foi qualificado (Primeiro Contato).
-    estimatedValue: numeric('estimated_value', { precision: 12, scale: 2, mode: 'number' }),
+    estimatedValue: numeric('estimated_value', {
+      precision: 12,
+      scale: 2,
+      mode: 'number',
+    }),
     // Datas de calendário (sem hora); nulas quando ainda não existem no processo.
     lastContactAt: date('last_contact_at', { mode: 'string' }),
     proposalValidUntil: date('proposal_valid_until', { mode: 'string' }),
     clientEventDate: date('client_event_date', { mode: 'string' }),
     stage: stageEnum('stage').notNull().default('PRIMEIRO_CONTATO'),
     lossReason: text('loss_reason'),
-    stageChangedAt: timestamp('stage_changed_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
-    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+    stageChangedAt: timestamp('stage_changed_at', {
+      withTimezone: true,
+      precision: 3,
+    })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 })
       .notNull()
       .defaultNow()
@@ -46,7 +63,10 @@ export const opportunities = pgTable(
   (table) => [
     index('opportunities_stage_idx').on(table.stage),
     index('opportunities_seller_idx').on(table.sellerName),
-    check('opportunities_estimated_value_positive', sql`${table.estimatedValue} IS NULL OR ${table.estimatedValue} > 0`),
+    check(
+      'opportunities_estimated_value_positive',
+      sql`${table.estimatedValue} IS NULL OR ${table.estimatedValue} > 0`,
+    ),
     check(
       'opportunities_lost_requires_reason',
       sql`${table.stage} <> 'PERDIDA' OR length(trim(coalesce(${table.lossReason}, ''))) > 0`,
@@ -87,9 +107,16 @@ export const stageChanges = pgTable(
     toStage: stageEnum('to_stage').notNull(),
     reason: text('reason'),
     changedBy: varchar('changed_by', { length: 80 }),
-    changedAt: timestamp('changed_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
+    changedAt: timestamp('changed_at', { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [index('stage_changes_opportunity_idx').on(table.opportunityId, table.changedAt)],
+  (table) => [
+    index('stage_changes_opportunity_idx').on(
+      table.opportunityId,
+      table.changedAt,
+    ),
+  ],
 );
 
 export type OpportunityRow = typeof opportunities.$inferSelect;

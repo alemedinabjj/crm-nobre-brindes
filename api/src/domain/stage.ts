@@ -17,7 +17,10 @@ export const FUNNEL_ORDER = [
   'FECHAMENTO',
 ] as const satisfies readonly Stage[];
 
-export const FINAL_STAGES = ['FECHAMENTO', 'PERDIDA'] as const satisfies readonly Stage[];
+export const FINAL_STAGES = [
+  'FECHAMENTO',
+  'PERDIDA',
+] as const satisfies readonly Stage[];
 
 export const STAGE_LABELS: Record<Stage, string> = {
   PRIMEIRO_CONTATO: 'Primeiro Contato',

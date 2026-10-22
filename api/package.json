@@ -24,7 +24,8 @@
     "db:migrate": "tsx --env-file-if-exists=.env src/database/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=.env src/database/seed.ts",
     "db:reset": "npm run db:migrate && npm run db:seed",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:all": "npm test && npm run test:e2e"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -33,7 +34,8 @@
     "drizzle-orm": "^0.45.4",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
@@ -52,7 +54,6 @@
     "supertest": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.2",
-    "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.1.2"
   },
   "engines": {

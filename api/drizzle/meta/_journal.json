@@ -8,6 +8,13 @@
       "when": 1792610072219,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792610588692,
+      "tag": "0001_opportunity_code_sequence",
+      "breakpoints": true
     }
   ]
 }

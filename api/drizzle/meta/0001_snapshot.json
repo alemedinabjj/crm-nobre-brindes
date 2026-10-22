@@ -1,0 +1,360 @@
+{
+  "id": "6b02f81b-2baa-438c-958c-ec815b1096eb",
+  "prevId": "7692d0ff-73a6-4330-99f6-4316b3f265a1",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.opportunities": {
+      "name": "opportunities",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "company_name": {
+          "name": "company_name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seller_name": {
+          "name": "seller_name",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estimated_value": {
+          "name": "estimated_value",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_contact_at": {
+          "name": "last_contact_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proposal_valid_until": {
+          "name": "proposal_valid_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client_event_date": {
+          "name": "client_event_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stage": {
+          "name": "stage",
+          "type": "stage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PRIMEIRO_CONTATO'"
+        },
+        "loss_reason": {
+          "name": "loss_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stage_changed_at": {
+          "name": "stage_changed_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "opportunities_stage_idx": {
+          "name": "opportunities_stage_idx",
+          "columns": [
+            {
+              "expression": "stage",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "opportunities_seller_idx": {
+          "name": "opportunities_seller_idx",
+          "columns": [
+            {
+              "expression": "seller_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "opportunities_code_unique": {
+          "name": "opportunities_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "opportunities_estimated_value_positive": {
+          "name": "opportunities_estimated_value_positive",
+          "value": "\"opportunities\".\"estimated_value\" IS NULL OR \"opportunities\".\"estimated_value\" > 0"
+        },
+        "opportunities_lost_requires_reason": {
+          "name": "opportunities_lost_requires_reason",
+          "value": "\"opportunities\".\"stage\" <> 'PERDIDA' OR length(trim(coalesce(\"opportunities\".\"loss_reason\", ''))) > 0"
+        },
+        "opportunities_quote_requires_value": {
+          "name": "opportunities_quote_requires_value",
+          "value": "\"opportunities\".\"stage\" IN ('PRIMEIRO_CONTATO', 'PERDIDA') OR \"opportunities\".\"estimated_value\" IS NOT NULL"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.opportunity_items": {
+      "name": "opportunity_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "opportunity_id": {
+          "name": "opportunity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "product_name": {
+          "name": "product_name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "opportunity_items_opportunity_idx": {
+          "name": "opportunity_items_opportunity_idx",
+          "columns": [
+            {
+              "expression": "opportunity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "opportunity_items_opportunity_id_opportunities_id_fk": {
+          "name": "opportunity_items_opportunity_id_opportunities_id_fk",
+          "tableFrom": "opportunity_items",
+          "tableTo": "opportunities",
+          "columnsFrom": [
+            "opportunity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "opportunity_items_quantity_positive": {
+          "name": "opportunity_items_quantity_positive",
+          "value": "\"opportunity_items\".\"quantity\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.stage_changes": {
+      "name": "stage_changes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "opportunity_id": {
+          "name": "opportunity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_stage": {
+          "name": "from_stage",
+          "type": "stage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_stage": {
+          "name": "to_stage",
+          "type": "stage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_by": {
+          "name": "changed_by",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_at": {
+          "name": "changed_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "stage_changes_opportunity_idx": {
+          "name": "stage_changes_opportunity_idx",
+          "columns": [
+            {
+              "expression": "opportunity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "changed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "stage_changes_opportunity_id_opportunities_id_fk": {
+          "name": "stage_changes_opportunity_id_opportunities_id_fk",
+          "tableFrom": "stage_changes",
+          "tableTo": "opportunities",
+          "columnsFrom": [
+            "opportunity_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.stage": {
+      "name": "stage",
+      "schema": "public",
+      "values": [
+        "PRIMEIRO_CONTATO",
+        "APRESENTACAO_ORCAMENTO",
+        "FOLLOW_UP",
+        "FORECAST",
+        "FECHAMENTO",
+        "PERDIDA"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {
+    "public.opportunity_code_seq": {
+      "name": "opportunity_code_seq",
+      "schema": "public",
+      "increment": "1",
+      "startWith": "2008",
+      "minValue": "1",
+      "maxValue": "9223372036854775807",
+      "cache": "1",
+      "cycle": false
+    }
+  },
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

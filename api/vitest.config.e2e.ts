@@ -1,11 +1,14 @@
 import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: { tsconfigPaths: true },
   test: {
     globals: true,
     root: './',
-    include: ['**/*.e2e-spec.ts'],
+    include: ['test/**/*.e2e-spec.ts'],
+    // Os arquivos compartilham o mesmo banco de teste e process.env.
+    fileParallelism: false,
+    testTimeout: 15_000,
+    hookTimeout: 30_000,
   },
 });
