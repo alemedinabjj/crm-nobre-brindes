@@ -261,7 +261,15 @@ Em 15/10/2026, isso aponta, por urgência, a **OPP-2002** (proposta vencida, 9 d
 
 Um chat lateral no CRM que responde sobre **o funil, ao vivo**, e sobre **como vender**, a partir de uma base de conhecimento. Ele pode preparar ações (mover etapa, registrar contato), que **só acontecem quando o vendedor confirma**. O objetivo é tirar o vendedor da planilha e do "deixa eu perguntar para alguém" sem abrir mão de controle e rastreabilidade.
 
-<!-- capturas do assistente em produção -->
+Capturas da versão publicada (Gemini de verdade, base sincronizada com embeddings):
+
+| Funil ao vivo e base de conhecimento, com fonte citada | Ação proposta, que só executa com confirmação |
+| --- | --- |
+| ![Assistente respondendo prioridades e prazo do bordado](docs/images/07-assistente-rag.jpg) | ![Assistente propondo fechar a OPP-2005](docs/images/08-assistente-acao.jpg) |
+
+![Prompt injection bloqueado antes de chegar ao modelo](docs/images/09-assistente-guardrail.jpg)
+
+A última captura mostra o guardrail de entrada: a tentativa de injection é recusada em 0,0 s, sem chamar o modelo. Acima dela, a ação descartada fica registrada como "Descartado".
 
 ### Visão geral
 
@@ -342,6 +350,7 @@ Toda pergunta fica em `assistant_interactions`, com a pergunta já mascarada, a 
 - **Ferramentas em vez de colocar o funil no prompt:** os dados mudam a todo momento e precisam respeitar filtro e permissão. A ferramenta consulta o dado na hora e mantém o prompt pequeno.
 - **RAG como ferramenta, não sempre ligado:** "quantas negociações estão em Follow-up?" não precisa da base; o modelo decide. O eval mede se ele decide bem.
 - **Interface própria de provedor:** o Gemini fica atrás de `LlmProvider`, e trocar de provedor é escrever outra implementação. O mesmo contrato tem um **provedor roteirizado** que os testes usam para verificar o comportamento em volta do modelo sem rede nem aleatoriedade.
+- **Modelo em produção:** `gemini-flash-lite-latest`, com `gemini-flash-latest` e `gemini-3.8-flash` de reserva. No dia da publicação o Flash completo devolvia 503 e 504 por excesso de demanda. O Lite responde em 2 a 4 s e passa nos evals abaixo. Trocar é só mudar `GEMINI_CHAT_MODEL`, sem tocar no código.
 - **Sem streaming nesta versão:** as respostas levam poucos segundos e o painel mostra o andamento. Streaming seria o próximo passo de UX.
 
 ---
