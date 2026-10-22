@@ -1,0 +1,21 @@
+name: Manter API acordada
+
+# O plano gratuito do Render hiberna a API após ~15 min sem uso, e a primeira
+# requisição depois disso leva cerca de 1 minuto. Em horário comercial
+# (seg a sex, 8h às 18h de Brasília), um ping a cada 10 minutos evita isso.
+# Horários em UTC: Brasília é UTC-3, então 11h-20h50 UTC = 8h-17h50.
+on:
+  schedule:
+    - cron: '*/10 11-20 * * 1-5'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping no /health
+        run: |
+          curl -fsS --retry 5 --retry-delay 15 --retry-all-errors --max-time 90 \
+            -w '\nHTTP %{http_code} em %{time_total}s\n' \
+            https://crm-nobre-brindes-api.onrender.com/health

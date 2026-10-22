@@ -3,7 +3,7 @@
 CRM interno para o time comercial da **Nobre Brindes**: um funil Kanban de oportunidades B2B com regras de etapa validadas no backend, uma fila do que precisa de atenção hoje, uma automação diária de retornos e um **assistente de IA** que consulta o CRM ao vivo e uma base de conhecimento (RAG), com ferramentas, guardrails e evals.
 
 **Demo:** [crm-nobre-brindes.vercel.app](https://crm-nobre-brindes.vercel.app) · **API:** [crm-nobre-brindes-api.onrender.com](https://crm-nobre-brindes-api.onrender.com/health)
-<sub>A API roda no plano gratuito do Render, que hiberna sem tráfego: a primeira requisição pode levar até 1 minuto. Os dados usam a data de referência do case, 15/10/2026.</sub>
+<sub>A API roda no plano gratuito do Render, que hiberna sem tráfego: a primeira requisição pode levar até 1 minuto. Em horário comercial (seg a sex, 8h às 18h) um workflow do GitHub Actions a mantém acordada. Os dados usam a data de referência do case, 15/10/2026.</sub>
 
 ![Quadro do funil com a fila "Para trabalhar hoje"](docs/images/01-quadro.png)
 
