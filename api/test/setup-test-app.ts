@@ -27,6 +27,8 @@ export const setupTestApp = async (
     DATABASE_URL: TEST_DATABASE_URL,
     REFERENCE_DATE: '2026-10-15',
     API_KEY: '',
+    AUTOMATION_SECRET: '',
+    FOLLOW_UP_CRON: '',
     ...env,
   });
 

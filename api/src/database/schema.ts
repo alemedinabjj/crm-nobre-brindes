@@ -10,6 +10,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -119,6 +120,73 @@ export const stageChanges = pgTable(
   ],
 );
 
+export const followUpStatusEnum = pgEnum('follow_up_status', [
+  'OPEN',
+  'DONE',
+  'CANCELED',
+]);
+export const followUpPriorityEnum = pgEnum('follow_up_priority', [
+  'HIGH',
+  'NORMAL',
+]);
+
+/** Cada execução da automação fica registrada: quando, por quê e o que fez. */
+export const automationRuns = pgTable('automation_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  automation: varchar('automation', { length: 40 }).notNull(),
+  trigger: varchar('trigger', { length: 20 }).notNull(),
+  referenceDate: date('reference_date', { mode: 'string' }).notNull(),
+  createdCount: integer('created_count').notNull(),
+  canceledCount: integer('canceled_count').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true, precision: 3 })
+    .notNull()
+    .defaultNow(),
+  finishedAt: timestamp('finished_at', { withTimezone: true, precision: 3 }),
+});
+
+export const followUpTasks = pgTable(
+  'follow_up_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    opportunityId: uuid('opportunity_id')
+      .notNull()
+      .references(() => opportunities.id, { onDelete: 'cascade' }),
+    sellerName: varchar('seller_name', { length: 80 }).notNull(),
+    reasonCode: varchar('reason_code', { length: 40 }).notNull(),
+    priority: followUpPriorityEnum('priority').notNull(),
+    title: varchar('title', { length: 200 }).notNull(),
+    details: text('details').notNull(),
+    dueDate: date('due_date', { mode: 'string' }).notNull(),
+    status: followUpStatusEnum('status').notNull().default('OPEN'),
+    resolution: text('resolution'),
+    createdByRunId: uuid('created_by_run_id').references(
+      () => automationRuns.id,
+      { onDelete: 'set null' },
+    ),
+    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true, precision: 3 }),
+  },
+  (table) => [
+    // Garante no banco a idempotência: no máximo uma tarefa aberta por negociação.
+    uniqueIndex('follow_up_tasks_one_open_per_opportunity')
+      .on(table.opportunityId)
+      .where(sql`${table.status} = 'OPEN'`),
+    index('follow_up_tasks_seller_status_idx').on(
+      table.sellerName,
+      table.status,
+      table.dueDate,
+    ),
+    check(
+      'follow_up_tasks_resolved_consistency',
+      sql`(${table.status} = 'OPEN') = (${table.resolvedAt} IS NULL)`,
+    ),
+  ],
+);
+
 export type OpportunityRow = typeof opportunities.$inferSelect;
 export type OpportunityItemRow = typeof opportunityItems.$inferSelect;
 export type StageChangeRow = typeof stageChanges.$inferSelect;
+export type FollowUpTaskRow = typeof followUpTasks.$inferSelect;
+export type AutomationRunRow = typeof automationRuns.$inferSelect;

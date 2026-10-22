@@ -28,6 +28,8 @@ import {
   parseCalendarDate,
 } from '../domain/calendar-date.js';
 import { checkContactDate, checkEditable } from '../domain/opportunity-edit.js';
+import { STAGE_LABELS } from '../domain/stage.js';
+import { resolveOpenFollowUp } from '../follow-ups/follow-up-tasks.repository.js';
 import {
   checkStageInvariants,
   evaluateTransition,
@@ -224,6 +226,13 @@ export class OpportunitiesService {
         reason,
         changedBy: input.changedBy?.trim() || null,
       });
+
+      await resolveOpenFollowUp(
+        tx,
+        id,
+        result.kind === 'LOSS' ? 'CANCELED' : 'DONE',
+        `Etapa alterada para ${STAGE_LABELS[input.to]}.`,
+      );
     });
 
     return this.findOne(id);
@@ -253,6 +262,13 @@ export class OpportunitiesService {
           .set({ lastContactAt: formatCalendarDate(contactedOn) })
           .where(eq(opportunities.id, id));
       }
+
+      await resolveOpenFollowUp(
+        tx,
+        id,
+        'DONE',
+        `Contato registrado em ${formatCalendarDate(contactedOn)}.`,
+      );
     });
 
     return this.findOne(id);

@@ -15,6 +15,13 @@
       "when": 1792610588692,
       "tag": "0001_opportunity_code_sequence",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792639373228,
+      "tag": "0002_follow_up_automation",
+      "breakpoints": true
     }
   ]
 }

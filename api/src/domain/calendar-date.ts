@@ -28,6 +28,22 @@ export const daysBetween = (from: Date, to: Date): number =>
       MS_PER_DAY,
   );
 
+const isWeekend = (value: Date): boolean => {
+  const weekday = value.getUTCDay();
+  return weekday === 0 || weekday === 6;
+};
+
+/** Soma dias úteis (seg–sex). Feriados ficam fora desta versão. */
+export const addBusinessDays = (from: Date, days: number): Date => {
+  let current = toCalendarDate(from);
+  let remaining = days;
+  while (remaining > 0) {
+    current = new Date(current.getTime() + MS_PER_DAY);
+    if (!isWeekend(current)) remaining -= 1;
+  }
+  return current;
+};
+
 /** "Hoje" no fuso da operação, como data de calendário. */
 export const todayIn = (timeZone: string, now: Date = new Date()): Date => {
   const isoDate = new Intl.DateTimeFormat('en-CA', {

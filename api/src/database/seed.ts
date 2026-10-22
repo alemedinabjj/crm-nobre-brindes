@@ -3,7 +3,12 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import { parseCalendarDate } from '../domain/calendar-date.js';
 import { checkStageInvariants } from '../domain/stage-transition.js';
-import { opportunities, opportunityItems, stageChanges } from './schema.js';
+import {
+  automationRuns,
+  opportunities,
+  opportunityItems,
+  stageChanges,
+} from './schema.js';
 import { SEED_OPPORTUNITIES, type SeedOpportunity } from './seed-data.js';
 
 const IMPORT_REASON = 'Carga inicial: etapa importada da planilha comercial';
@@ -32,6 +37,7 @@ export const seedDatabase = async (db: NodePgDatabase): Promise<void> => {
 
   await db.transaction(async (tx) => {
     await tx.delete(opportunities);
+    await tx.delete(automationRuns);
 
     for (const seed of SEED_OPPORTUNITIES) {
       const { item, ...opportunity } = seed;
