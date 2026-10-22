@@ -1,4 +1,5 @@
 import { CalendarDays } from "lucide-react";
+import type { ReactNode } from "react";
 import { formatShortDate } from "@/lib/format";
 
 /**
@@ -6,7 +7,7 @@ import { formatShortDate } from "@/lib/format";
  * nobrebrindes.com.br. O logotipo oficial pode substituir a marca em texto
  * colocando o SVG da marca em /public.
  */
-export const AppHeader = ({ today }: { today?: string }) => (
+export const AppHeader = ({ today, actions }: { today?: string; actions?: ReactNode }) => (
   <header className="bg-lime text-forest-deep">
     <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
       <div className="flex items-baseline gap-3">
@@ -17,12 +18,15 @@ export const AppHeader = ({ today }: { today?: string }) => (
         <span className="hidden h-5 w-px bg-forest-deep/25 sm:block" aria-hidden />
         <span className="hidden text-xs font-semibold uppercase tracking-[0.18em] sm:block">CRM Comercial</span>
       </div>
-      {today && (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-forest-deep px-3 py-1 text-xs font-semibold text-white">
-          <CalendarDays className="size-3.5" aria-hidden />
-          Hoje, {formatShortDate(today)}
-        </span>
-      )}
+      <div className="flex items-center gap-2">
+        {actions}
+        {today && (
+          <span className="hidden items-center gap-1.5 rounded-full bg-forest-deep/10 px-3 py-1 text-xs font-semibold sm:inline-flex">
+            <CalendarDays className="size-3.5" aria-hidden />
+            Hoje, {formatShortDate(today)}
+          </span>
+        )}
+      </div>
     </div>
   </header>
 );

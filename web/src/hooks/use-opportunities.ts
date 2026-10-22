@@ -57,7 +57,12 @@ export const useChangeStage = () => {
     onSuccess: (detail: OpportunityDetail) => {
       queryClient.setQueryData(queryKeys.detail(detail.id), detail);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.opportunities }),
+    // Mover de etapa conclui ou cancela o retorno aberto no backend.
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.opportunities }),
+        queryClient.invalidateQueries({ queryKey: ["follow-ups"] }),
+      ]),
   });
 };
 
@@ -68,7 +73,11 @@ export const useRegisterContact = () => {
     mutationFn: (id: string) => api.registerContact(id),
     onSuccess: (detail) => {
       queryClient.setQueryData(queryKeys.detail(detail.id), detail);
-      return queryClient.invalidateQueries({ queryKey: [...queryKeys.opportunities, "list"] });
+      // Registrar contato conclui o retorno aberto dessa negociação.
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...queryKeys.opportunities, "list"] }),
+        queryClient.invalidateQueries({ queryKey: ["follow-ups"] }),
+      ]);
     },
   });
 };

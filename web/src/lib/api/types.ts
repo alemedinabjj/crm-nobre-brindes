@@ -85,3 +85,35 @@ export type OpportunityFilters = {
   seller?: string;
   attention?: AttentionFilter;
 };
+
+export type FollowUpStatus = "OPEN" | "DONE" | "CANCELED";
+
+export type FollowUpTask = {
+  id: string;
+  opportunityId: string;
+  opportunityCode: string;
+  companyName: string;
+  stage: Stage;
+  stageLabel: string;
+  sellerName: string;
+  reasonCode: string;
+  priority: "HIGH" | "NORMAL";
+  title: string;
+  details: string;
+  dueDate: string;
+  daysOverdue: number;
+  status: FollowUpStatus;
+  resolution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type AutomationRun = {
+  id: string;
+  trigger: "schedule" | "cron" | "manual";
+  referenceDate: string;
+  createdCount: number;
+  canceledCount: number;
+  startedAt: string;
+  finishedAt: string | null;
+};

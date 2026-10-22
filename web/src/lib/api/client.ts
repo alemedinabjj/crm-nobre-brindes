@@ -1,5 +1,7 @@
 import type {
   ApiErrorBody,
+  AutomationRun,
+  FollowUpTask,
   Meta,
   Opportunity,
   OpportunityDetail,
@@ -45,6 +47,12 @@ const parseBody = async (response: Response): Promise<ApiErrorBody | null> => {
 };
 
 const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+  return requestRaw(path, init).then(async (response) =>
+    response.status === 204 ? (undefined as T) : ((await response.json()) as T),
+  );
+};
+
+const requestRaw = async (path: string, init: RequestInit = {}): Promise<Response> => {
   let response: Response;
   try {
     response = await fetch(`${API_URL}${path}`, {
@@ -56,7 +64,7 @@ const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
   }
 
   if (!response.ok) throw new ApiError(response.status, await parseBody(response));
-  return (await response.json()) as T;
+  return response;
 };
 
 const toQuery = (filters: OpportunityFilters): string => {
@@ -78,6 +86,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  listFollowUps: (seller?: string) =>
+    request<FollowUpTask[]>(`/follow-up-tasks${seller ? `?seller=${encodeURIComponent(seller)}` : ""}`),
+  resolveFollowUp: (id: string, status: "DONE" | "CANCELED") =>
+    request<void>(`/follow-up-tasks/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  runFollowUps: () => request<AutomationRun>("/automations/follow-ups/run", { method: "POST" }),
+  listAutomationRuns: () => request<AutomationRun[]>("/automations/follow-ups/runs?limit=1"),
   registerContact: (id: string) =>
     request<OpportunityDetail>(`/opportunities/${id}/contacts`, {
       method: "POST",
