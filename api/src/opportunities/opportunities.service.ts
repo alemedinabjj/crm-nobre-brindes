@@ -109,6 +109,15 @@ export class OpportunitiesService {
     };
   }
 
+  /** Busca pelo código de negócio (OPP-2003); null quando não existe. */
+  async findByCode(code: string): Promise<OpportunityDetailView | null> {
+    const [row] = await this.db
+      .select({ id: opportunities.id })
+      .from(opportunities)
+      .where(eq(opportunities.code, code.trim().toUpperCase()));
+    return row ? this.findOne(row.id) : null;
+  }
+
   async create(input: CreateOpportunityInput): Promise<OpportunityDetailView> {
     this.assertNoViolations(
       checkContactDate(toDate(input.lastContactAt), this.clock.today()),

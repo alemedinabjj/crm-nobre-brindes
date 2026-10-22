@@ -1,7 +1,16 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AssistantController } from './assistant/assistant.controller.js';
+import { AssistantService } from './assistant/assistant.service.js';
+import { GeminiProvider } from './assistant/llm/gemini.provider.js';
+import {
+  LLM_PROVIDER,
+  type LlmProvider,
+} from './assistant/llm/llm-provider.js';
 import { ApiKeyGuard } from './common/api-key.guard.js';
+import { APP_CONFIG, type AppConfig } from './config/app-config.js';
+import { EMBEDDING_DIMENSIONS } from './database/schema.js';
 import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { FollowUpsController } from './follow-ups/follow-ups.controller.js';
@@ -17,6 +26,7 @@ import { OpportunitiesService } from './opportunities/opportunities.service.js';
   controllers: [
     OpportunitiesController,
     FollowUpsController,
+    AssistantController,
     MetaController,
     HealthController,
   ],
@@ -24,6 +34,22 @@ import { OpportunitiesService } from './opportunities/opportunities.service.js';
     OpportunitiesService,
     FollowUpsService,
     FollowUpsScheduler,
+    AssistantService,
+    {
+      // Sem chave, o provedor é null: o assistente responde 503 e o CRM segue normal.
+      provide: LLM_PROVIDER,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig): LlmProvider | null =>
+        config.GEMINI_API_KEY
+          ? new GeminiProvider({
+              apiKey: config.GEMINI_API_KEY,
+              chatModel: config.GEMINI_CHAT_MODEL,
+              embeddingModel: config.GEMINI_EMBEDDING_MODEL,
+              embeddingDimensions: EMBEDDING_DIMENSIONS,
+              timeoutMs: 30_000,
+            })
+          : null,
+    },
     { provide: APP_GUARD, useClass: ApiKeyGuard },
   ],
 })

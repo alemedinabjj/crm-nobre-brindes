@@ -22,6 +22,17 @@ const envSchema = z.object({
   API_KEY: optionalSecret,
   /** Exigido no header x-automation-secret para disparar a automação. */
   AUTOMATION_SECRET: optionalSecret,
+  /** Chave do Gemini. Sem ela, o assistente fica desligado e o resto funciona. */
+  GEMINI_API_KEY: optionalSecret,
+  GEMINI_CHAT_MODEL: z.string().default('gemini-flash-latest'),
+  GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
+  /** Sincroniza a base de conhecimento ao subir (só reprocessa o que mudou). */
+  KNOWLEDGE_AUTO_SYNC: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  /** Perguntas por IP a cada 10 minutos: protege a cota do provedor de IA. */
+  ASSISTANT_RATE_LIMIT: z.coerce.number().int().positive().default(30),
   /**
    * Agenda interna da automação de follow-up (cron de 5 campos, no fuso da
    * operação). Padrão: 7h40 em dias úteis. Vazio desliga o agendamento.

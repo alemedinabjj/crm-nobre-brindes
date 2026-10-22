@@ -1,6 +1,7 @@
 services:
   db:
-    image: postgres:16-alpine
+    # Postgres 16 com a extensão pgvector (busca semântica do assistente).
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -27,6 +28,8 @@ services:
       TZ_OPERACAO: America/Sao_Paulo
       REFERENCE_DATE: ${REFERENCE_DATE:-2026-10-15}
       SEED_ON_START: ${SEED_ON_START:-true}
+      # Opcional: sem a chave, o CRM funciona e o assistente fica desligado.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - '3001:3001'
     healthcheck:

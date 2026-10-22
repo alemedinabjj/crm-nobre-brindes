@@ -1,9 +1,11 @@
-import { sql } from 'drizzle-orm';
+import { sql, type SQL } from 'drizzle-orm';
 import {
   check,
+  customType,
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgSequence,
@@ -13,6 +15,7 @@ import {
   uniqueIndex,
   uuid,
   varchar,
+  vector,
 } from 'drizzle-orm/pg-core';
 import { STAGES } from '../domain/stage.js';
 
@@ -184,6 +187,80 @@ export const followUpTasks = pgTable(
     ),
   ],
 );
+
+const tsvector = customType<{ data: string }>({
+  dataType: () => 'tsvector',
+});
+
+export const EMBEDDING_DIMENSIONS = 768;
+
+/**
+ * Base de conhecimento do assistente (RAG). Cada linha é um chunk de um
+ * documento Markdown de api/knowledge, com:
+ * - embedding (pgvector, índice HNSW por cosseno) para busca semântica;
+ * - search_vector (full-text em português, sem acentos, gerado pelo banco)
+ *   para busca por palavra-chave: "producao" acha "produção". As duas são
+ *   combinadas por RRF na consulta.
+ * O embedding pode ser nulo: sem chave de IA, a busca segue por palavra-chave.
+ */
+export const knowledgeChunks = pgTable(
+  'knowledge_chunks',
+  {
+    id: varchar('id', { length: 120 }).primaryKey(),
+    documentSlug: varchar('document_slug', { length: 80 }).notNull(),
+    documentTitle: varchar('document_title', { length: 200 }).notNull(),
+    category: varchar('category', { length: 40 }).notNull(),
+    section: varchar('section', { length: 200 }).notNull(),
+    ordinal: integer('ordinal').notNull(),
+    content: text('content').notNull(),
+    contentHash: varchar('content_hash', { length: 64 }).notNull(),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }),
+    embeddingModel: varchar('embedding_model', { length: 80 }),
+    searchVector: tsvector('search_vector').generatedAlwaysAs(
+      (): SQL =>
+        sql`setweight(to_tsvector('portuguese', immutable_unaccent(coalesce(${knowledgeChunks.documentTitle}, '') || ' ' || coalesce(${knowledgeChunks.section}, ''))), 'A') || setweight(to_tsvector('portuguese', immutable_unaccent(coalesce(${knowledgeChunks.content}, ''))), 'B')`,
+    ),
+    updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('knowledge_chunks_embedding_idx').using(
+      'hnsw',
+      table.embedding.op('vector_cosine_ops'),
+    ),
+    index('knowledge_chunks_search_idx').using('gin', table.searchVector),
+    index('knowledge_chunks_document_idx').on(table.documentSlug),
+  ],
+);
+
+/**
+ * Registro de cada pergunta ao assistente: base para auditoria, custo e para
+ * transformar conversas reais em novos casos de eval. A pergunta é gravada
+ * já com dados sensíveis mascarados pelos guardrails.
+ */
+export const assistantInteractions = pgTable(
+  'assistant_interactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+    outcome: varchar('outcome', { length: 30 }).notNull(),
+    toolCalls: jsonb('tool_calls').notNull(),
+    citations: jsonb('citations').notNull(),
+    guardrailFlags: jsonb('guardrail_flags').notNull(),
+    model: varchar('model', { length: 80 }).notNull(),
+    inputTokens: integer('input_tokens').notNull(),
+    outputTokens: integer('output_tokens').notNull(),
+    latencyMs: integer('latency_ms').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index('assistant_interactions_created_idx').on(table.createdAt)],
+);
+
+export type KnowledgeChunkRow = typeof knowledgeChunks.$inferSelect;
 
 export type OpportunityRow = typeof opportunities.$inferSelect;
 export type OpportunityItemRow = typeof opportunityItems.$inferSelect;

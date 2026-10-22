@@ -4,6 +4,10 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 import { AppModule } from '../src/app.module.js';
+import {
+  LLM_PROVIDER,
+  type LlmProvider,
+} from '../src/assistant/llm/llm-provider.js';
 import { seedDatabase } from '../src/database/seed.js';
 
 export const TEST_DATABASE_URL =
@@ -22,6 +26,7 @@ export type TestContext = {
  */
 export const setupTestApp = async (
   env: Record<string, string> = {},
+  options: { llm?: LlmProvider } = {},
 ): Promise<TestContext> => {
   Object.assign(process.env, {
     DATABASE_URL: TEST_DATABASE_URL,
@@ -29,6 +34,8 @@ export const setupTestApp = async (
     API_KEY: '',
     AUTOMATION_SECRET: '',
     FOLLOW_UP_CRON: '',
+    GEMINI_API_KEY: '',
+    KNOWLEDGE_AUTO_SYNC: 'false',
     ...env,
   });
 
@@ -36,9 +43,9 @@ export const setupTestApp = async (
   const db = drizzle(pool);
   await migrate(db, { migrationsFolder: './drizzle' });
 
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
+  const builder = Test.createTestingModule({ imports: [AppModule] });
+  if (options.llm) builder.overrideProvider(LLM_PROVIDER).useValue(options.llm);
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication();
   await app.init();
 

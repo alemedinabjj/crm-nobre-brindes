@@ -6,3 +6,7 @@ coverage/
 .env
 .env.local
 .DS_Store
+
+# relatórios de eval gerados localmente (o CI publica como artefato)
+api/evals/reports/*
+!api/evals/reports/.gitkeep

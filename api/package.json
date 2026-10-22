@@ -25,9 +25,13 @@
     "db:seed": "tsx --env-file-if-exists=.env src/database/seed.ts",
     "db:reset": "npm run db:migrate && npm run db:seed",
     "typecheck": "tsc --noEmit",
-    "test:all": "npm test && npm run test:e2e"
+    "test:all": "npm test && npm run test:e2e",
+    "kb:sync": "tsx --env-file-if-exists=.env scripts/sync-knowledge.ts",
+    "eval": "tsx --env-file-if-exists=.env evals/run-evals.ts",
+    "eval:offline": "tsx --env-file-if-exists=.env evals/run-evals.ts --offline --suite retrieval"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
     "@nestjs/platform-express": "^12.0.1",
