@@ -30,6 +30,16 @@ export const isRetryable = (error: unknown): boolean => {
 export const isModelMissing = (error: unknown): boolean =>
   errorStatus(error) === 404;
 
+/**
+ * Timeout já custou o prazo inteiro: repetir no mesmo modelo dobra a espera
+ * do usuário. Melhor ir direto para o próximo da fila.
+ */
+export const isTimeout = (error: unknown): boolean => {
+  if (errorStatus(error) === 504 || errorStatus(error) === 408) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /timeout|timed out|aborted|DEADLINE_EXCEEDED/i.test(message);
+};
+
 export type RetryPolicy = {
   /** Tentativas por modelo (a primeira inclusa). */
   attemptsPerModel: number;
@@ -45,6 +55,35 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
 export type Attempt = { model: string; error: unknown };
 
 /**
+ * Disjuntor simples: modelo que acabou de falhar vai para o fim da fila por um
+ * tempo, e as próximas perguntas não pagam de novo o timeout dele.
+ */
+export class ModelCooldown {
+  private readonly until = new Map<string, number>();
+
+  constructor(
+    private readonly cooldownMs = 120_000,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  trip(model: string): void {
+    this.until.set(model, this.now() + this.cooldownMs);
+  }
+
+  isCooling(model: string): boolean {
+    return (this.until.get(model) ?? 0) > this.now();
+  }
+
+  /** Mantém a ordem, mas manda os modelos em resfriamento para o fim. */
+  order(models: readonly string[]): string[] {
+    return [
+      ...models.filter((model) => !this.isCooling(model)),
+      ...models.filter((model) => this.isCooling(model)),
+    ];
+  }
+}
+
+/**
  * Executa `call` em cada modelo da lista, em ordem, com novas tentativas.
  * Devolve o primeiro sucesso; erro não recuperável sobe imediatamente; se tudo
  * falhar por motivo passageiro, lança `exhausted(tentativas)`.
@@ -57,6 +96,8 @@ export const withModelFallback = async <T>(
     sleep?: (ms: number) => Promise<void>;
     exhausted: (attempts: Attempt[]) => Error;
     onRetry?: (attempt: Attempt) => void;
+    /** Avisado quando um modelo esgota as tentativas (para o disjuntor). */
+    onModelFailed?: (model: string) => void;
   },
 ): Promise<T> => {
   const policy = options.policy ?? DEFAULT_RETRY_POLICY;
@@ -76,9 +117,10 @@ export const withModelFallback = async <T>(
         const attempt = { model, error };
         attempts.push(attempt);
         options.onRetry?.(attempt);
-        if (missing) break;
+        if (missing || isTimeout(error)) break;
       }
     }
+    options.onModelFailed?.(model);
   }
   throw options.exhausted(attempts);
 };

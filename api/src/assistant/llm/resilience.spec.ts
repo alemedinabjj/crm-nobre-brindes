@@ -5,7 +5,7 @@ import {
   toContents,
 } from './gemini.provider.js';
 import { LlmUnavailableError } from './llm-provider.js';
-import { isRetryable, withModelFallback } from './resilience.js';
+import { isRetryable, ModelCooldown, withModelFallback } from './resilience.js';
 
 const apiError = (status: number) =>
   Object.assign(new Error(`erro ${status}`), { status });
@@ -54,7 +54,7 @@ describe('withModelFallback', () => {
   });
 
   it('esgotadas as tentativas, lança erro de indisponibilidade', async () => {
-    const call = vi.fn(() => Promise.reject(apiError(504)));
+    const call = vi.fn(() => Promise.reject(apiError(503)));
     await expect(run(['a', 'b'], call)).rejects.toThrow('4 tentativas');
   });
 
@@ -72,6 +72,19 @@ describe('withModelFallback', () => {
       'principal',
       'aposentado',
       'vigente',
+    ]);
+  });
+
+  it('timeout não se repete no mesmo modelo: vai direto ao reserva', async () => {
+    const call = vi.fn((model: string) =>
+      model === 'principal'
+        ? Promise.reject(apiError(504))
+        : Promise.resolve(model),
+    );
+    await expect(run(['principal', 'reserva'], call)).resolves.toBe('reserva');
+    expect(call.mock.calls.map(([model]) => model)).toEqual([
+      'principal',
+      'reserva',
     ]);
   });
 
@@ -141,6 +154,23 @@ describe('toContents', () => {
       'principal',
       'reserva',
       'outro',
+    ]);
+  });
+});
+
+describe('ModelCooldown', () => {
+  it('manda o modelo que falhou para o fim da fila até o prazo vencer', () => {
+    let now = 0;
+    const cooldown = new ModelCooldown(1000, () => now);
+    cooldown.trip('principal');
+    expect(cooldown.order(['principal', 'reserva'])).toEqual([
+      'reserva',
+      'principal',
+    ]);
+    now = 1001;
+    expect(cooldown.order(['principal', 'reserva'])).toEqual([
+      'principal',
+      'reserva',
     ]);
   });
 });

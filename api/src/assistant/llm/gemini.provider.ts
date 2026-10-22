@@ -16,6 +16,7 @@ import {
 } from './llm-provider.js';
 import {
   errorStatus,
+  ModelCooldown,
   withModelFallback,
   type Attempt,
   type RetryPolicy,
@@ -129,6 +130,7 @@ const providerContentOf = (
 export class GeminiProvider implements LlmProvider {
   readonly name = 'gemini';
   private readonly client: GoogleGenAI;
+  private readonly cooldown = new ModelCooldown();
 
   constructor(private readonly options: GeminiOptions) {
     this.client = new GoogleGenAI({
@@ -164,7 +166,7 @@ export class GeminiProvider implements LlmProvider {
    * ferramentas segue no mesmo modelo e as assinaturas continuam válidas.
    */
   modelOrderFor(messages: AgentMessage[]): string[] {
-    const models = this.chatModels;
+    const models = this.cooldown.order(this.chatModels);
     const sticky = stickyModel(messages);
     return sticky && models.includes(sticky)
       ? [sticky, ...models.filter((model) => model !== sticky)]
@@ -178,6 +180,7 @@ export class GeminiProvider implements LlmProvider {
       {
         policy: this.options.retryPolicy,
         onRetry: this.options.onRetry,
+        onModelFailed: (model) => this.cooldown.trip(model),
         exhausted: (attempts) => {
           const last = attempts.at(-1);
           const status = errorStatus(last?.error);
