@@ -4,6 +4,12 @@ name: Evals do assistente
 # do case. Manual ou semanal, porque consome cota do provedor de IA.
 on:
   workflow_dispatch:
+    inputs:
+      alvo:
+        description: 'Onde rodar: API local subida no job ou a API de produção'
+        type: choice
+        options: [local, producao]
+        default: local
   schedule:
     - cron: '0 11 * * 1'
 
@@ -30,7 +36,8 @@ jobs:
       REFERENCE_DATE: '2026-10-15'
       FOLLOW_UP_CRON: ''
       ASSISTANT_RATE_LIMIT: '500'
-      EVAL_API_URL: http://localhost:3001
+      EVAL_API_URL: ${{ inputs.alvo == 'producao' && 'https://crm-nobre-brindes-api.onrender.com' || 'http://localhost:3001' }}
+      EVAL_LOCAL: ${{ inputs.alvo != 'producao' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,13 +48,20 @@ jobs:
       - name: Verificar segredo
         run: test -n "$GEMINI_API_KEY" || (echo "Configure o segredo GEMINI_API_KEY no repositório." && exit 1)
       - run: npm ci
-      - run: npm run build
-      - run: npm run db:reset
-      - run: npm run kb:sync
+      - if: env.EVAL_LOCAL == 'true'
+        run: npm run build
+      - if: env.EVAL_LOCAL == 'true'
+        run: npm run db:reset
+      - if: env.EVAL_LOCAL == 'true'
+        run: npm run kb:sync
       - name: Subir API
+        if: env.EVAL_LOCAL == 'true'
         run: |
           nohup node dist/main.js > api.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:3001/health && break; sleep 2; done
+      - name: Acordar a API de produção
+        if: env.EVAL_LOCAL != 'true'
+        run: for i in $(seq 1 20); do curl -sf "$EVAL_API_URL/health" && break; sleep 6; done
       - name: Rodar evals (recuperação + agente + juiz)
         run: npm run eval -- --judge
       - name: Publicar relatório

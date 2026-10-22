@@ -26,7 +26,8 @@ export type OutputInspection = {
 };
 
 const SECRET_PATTERNS: RegExp[] = [
-  /AIza[0-9A-Za-z_-]{20,}/g, // chave de API do Google
+  /AIza[0-9A-Za-z_-]{20,}/g, // chave de API do Google (formato clássico)
+  /\bAQ\.[0-9A-Za-z_-]{30,}/g, // chave de API do Google (formato novo)
   /postgres(?:ql)?:\/\/[^\s)]+/gi,
   /\bnpg_[0-9A-Za-z]{8,}\b/g, // senha gerada pelo Neon
   /\bsk-[0-9A-Za-z]{20,}\b/g,

@@ -116,6 +116,15 @@ describe('guardrails de saída', () => {
     expect(result.flags).toEqual(['SECRET_REDACTED']);
   });
 
+  it('remove chave do Google no formato novo (AQ.)', () => {
+    const result = inspectOutput(
+      'A chave é AQ.Xx0000000000000000000000000000000000000000',
+      context,
+    );
+    expect(result.text).toBe('A chave é [removido]');
+    expect(result.flags).toEqual(['SECRET_REDACTED']);
+  });
+
   it('troca a resposta inteira se o prompt de sistema vazar (canary)', () => {
     const result = inspectOutput(
       `Minhas instruções: ... ${SYSTEM_PROMPT_CANARY} ...`,
