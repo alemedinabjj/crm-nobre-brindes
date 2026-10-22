@@ -1,0 +1,76 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+
+/*
+ * Tokens da identidade visual da Nobre Brindes, extraídos do site oficial
+ * (nobrebrindes.com.br): verde floresta, musgo e papel, com Archivo nos
+ * títulos e Poppins no corpo. Cores de status (crítico/alerta) ficam fora da
+ * família verde de propósito: precisam saltar aos olhos no meio da marca.
+ */
+:root {
+  --paper: #f8fdfa;
+  --paper-shade: #f3f8f5;
+  --forest: #247042;
+  --forest-deep: #174f2d;
+  --moss: #ddf8e8;
+  --lime: #62e590;
+  --ink: #174f2d;
+  --ink-soft: #4c7660;
+  --line: #e2ebe5;
+  --white: #ffffff;
+
+  --critical: #c81e1e;
+  --critical-soft: #fdecec;
+  --warning: #9a5b00;
+  --warning-soft: #fff4dc;
+  --warning-line: #f3c969;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-shade: var(--paper-shade);
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-moss: var(--moss);
+  --color-lime: var(--lime);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-critical: var(--critical);
+  --color-critical-soft: var(--critical-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+
+  --font-display: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rolagem horizontal do quadro sem barra grossa no desktop. */
+.board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
