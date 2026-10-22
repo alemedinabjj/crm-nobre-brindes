@@ -55,6 +55,8 @@ export type GenerateResponse = {
   toolCalls: ToolCall[];
   usage: TokenUsage;
   providerContent?: unknown;
+  /** Modelo que gerou a resposta, quando o provedor faz fallback. */
+  model?: string;
 };
 
 export type EmbeddingPurpose = 'document' | 'query';
@@ -70,11 +72,14 @@ export interface LlmProvider {
 
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 
+/**
+ * O provedor não conseguiu responder (sobrecarga, timeout, cota) mesmo após
+ * as novas tentativas. É falha temporária do lado de fora, não bug nosso:
+ * vira 503 com mensagem clara em vez de 500 genérico.
+ */
 export class LlmUnavailableError extends Error {
-  constructor(
-    message = 'O assistente de IA não está configurado (GEMINI_API_KEY ausente).',
-  ) {
-    super(message);
+  constructor(message = 'O provedor de IA não respondeu.', cause?: unknown) {
+    super(message, { cause });
     this.name = 'LlmUnavailableError';
   }
 }

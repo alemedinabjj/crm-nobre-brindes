@@ -5,37 +5,64 @@ import {
   type GenerateContentResponse,
   type Part,
 } from '@google/genai';
-import type {
-  AgentMessage,
-  EmbeddingPurpose,
-  GenerateRequest,
-  GenerateResponse,
-  LlmProvider,
-  ToolCall,
+import {
+  LlmUnavailableError,
+  type AgentMessage,
+  type EmbeddingPurpose,
+  type GenerateRequest,
+  type GenerateResponse,
+  type LlmProvider,
+  type ToolCall,
 } from './llm-provider.js';
+import {
+  errorStatus,
+  withModelFallback,
+  type Attempt,
+  type RetryPolicy,
+} from './resilience.js';
 
 export type GeminiOptions = {
   apiKey: string;
   chatModel: string;
+  /** Modelos reserva, tentados em ordem quando o principal está sobrecarregado. */
+  fallbackChatModels?: string[];
   embeddingModel: string;
   embeddingDimensions: number;
   timeoutMs: number;
+  retryPolicy?: RetryPolicy;
+  onRetry?: (attempt: Attempt) => void;
 };
+
+/** Conteúdo cru guardado junto do modelo que o produziu. */
+type ProviderContent = { model: string; content: Content };
+
+const isProviderContent = (value: unknown): value is ProviderContent =>
+  typeof value === 'object' &&
+  value !== null &&
+  'model' in value &&
+  'content' in value &&
+  typeof (value as { content: unknown }).content === 'object';
 
 const EMBED_BATCH_SIZE = 50;
 
-const isContent = (value: unknown): value is Content =>
-  typeof value === 'object' && value !== null && 'parts' in value;
-
-/** Converte o histórico neutro do agente para o formato do Gemini. */
-const toContents = (messages: AgentMessage[]): Content[] =>
+/**
+ * Converte o histórico neutro do agente para o formato do Gemini.
+ *
+ * A resposta crua (com as thought signatures) só é reenviada ao mesmo modelo
+ * que a gerou: assinaturas não valem entre modelos. Se o turno anterior veio
+ * de outro modelo (houve fallback), as chamadas são reconstruídas sem elas.
+ */
+export const toContents = (
+  messages: AgentMessage[],
+  model: string,
+): Content[] =>
   messages.map((message): Content => {
     if (message.role === 'user') {
       return { role: 'user', parts: [{ text: message.text }] };
     }
     if (message.role === 'assistant') {
-      // Reenvia a resposta original: preserva thought signatures das chamadas.
-      if (isContent(message.providerContent)) return message.providerContent;
+      const raw = message.providerContent;
+      if (isProviderContent(raw) && raw.model === model) return raw.content;
       const parts: Part[] = [];
       if (message.text) parts.push({ text: message.text });
       for (const call of message.toolCalls) {
@@ -73,6 +100,14 @@ const readText = (response: GenerateContentResponse): string => {
     .trim();
 };
 
+const providerContentOf = (
+  model: string,
+  response: GenerateContentResponse,
+): ProviderContent | undefined => {
+  const content = response.candidates?.[0]?.content;
+  return content ? { model, content } : undefined;
+};
+
 export class GeminiProvider implements LlmProvider {
   readonly name = 'gemini';
   private readonly client: GoogleGenAI;
@@ -96,10 +131,43 @@ export class GeminiProvider implements LlmProvider {
     return this.options.embeddingDimensions;
   }
 
+  get chatModels(): string[] {
+    return [
+      this.options.chatModel,
+      ...(this.options.fallbackChatModels ?? []).filter(
+        (model) => model !== this.options.chatModel,
+      ),
+    ];
+  }
+
   async generate(request: GenerateRequest): Promise<GenerateResponse> {
+    return withModelFallback(
+      this.chatModels,
+      (model) => this.generateWith(model, request),
+      {
+        policy: this.options.retryPolicy,
+        onRetry: this.options.onRetry,
+        exhausted: (attempts) => {
+          const last = attempts.at(-1);
+          const status = errorStatus(last?.error);
+          return new LlmUnavailableError(
+            `Gemini indisponível após ${attempts.length} tentativa(s)` +
+              (status ? ` (último status ${status})` : '') +
+              ` nos modelos ${this.chatModels.join(', ')}.`,
+            last?.error,
+          );
+        },
+      },
+    );
+  }
+
+  private async generateWith(
+    model: string,
+    request: GenerateRequest,
+  ): Promise<GenerateResponse> {
     const response = await this.client.models.generateContent({
-      model: this.options.chatModel,
-      contents: toContents(request.messages),
+      model,
+      contents: toContents(request.messages, model),
       config: {
         systemInstruction: request.system,
         temperature: request.temperature ?? 0.2,
@@ -125,7 +193,8 @@ export class GeminiProvider implements LlmProvider {
         inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
         outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
       },
-      providerContent: response.candidates?.[0]?.content,
+      providerContent: providerContentOf(model, response),
+      model,
     };
   }
 

@@ -93,6 +93,8 @@ export const runAssistant = async (
   const { provider } = dependencies;
   const flags = new Set<GuardrailFlag>();
   const usage = { inputTokens: 0, outputTokens: 0 };
+  /** Modelo que de fato respondeu (pode ser o reserva, se houve fallback). */
+  let answeredBy = provider.chatModel;
 
   const reply = (
     partial: Partial<AssistantReply> &
@@ -102,7 +104,7 @@ export const runAssistant = async (
     toolCalls: [],
     proposedActions: [],
     usage,
-    model: provider.chatModel,
+    model: answeredBy,
     sanitizedQuestion: question,
     ...partial,
     guardrailFlags: [...flags],
@@ -229,6 +231,7 @@ export const runAssistant = async (
     });
     usage.inputTokens += response.usage.inputTokens;
     usage.outputTokens += response.usage.outputTokens;
+    if (response.model) answeredBy = response.model;
 
     if (response.toolCalls.length === 0) {
       answer = response.text;

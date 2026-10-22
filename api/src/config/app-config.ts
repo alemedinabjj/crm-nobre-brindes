@@ -25,6 +25,16 @@ const envSchema = z.object({
   /** Chave do Gemini. Sem ela, o assistente fica desligado e o resto funciona. */
   GEMINI_API_KEY: optionalSecret,
   GEMINI_CHAT_MODEL: z.string().default('gemini-flash-latest'),
+  /** Reservas, em ordem, quando o modelo principal está sobrecarregado (503/504/429). */
+  GEMINI_FALLBACK_MODELS: z
+    .string()
+    .default('gemini-2.5-flash,gemini-flash-lite-latest')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((model) => model.trim())
+        .filter(Boolean),
+    ),
   GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-001'),
   /** Sincroniza a base de conhecimento ao subir (só reprocessa o que mudou). */
   KNOWLEDGE_AUTO_SYNC: z

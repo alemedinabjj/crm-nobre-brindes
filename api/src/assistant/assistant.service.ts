@@ -26,7 +26,11 @@ import {
   type SearchHit,
   type SyncReport,
 } from './knowledge/knowledge.repository.js';
-import { LLM_PROVIDER, type LlmProvider } from './llm/llm-provider.js';
+import {
+  LLM_PROVIDER,
+  LlmUnavailableError,
+  type LlmProvider,
+} from './llm/llm-provider.js';
 import { SlidingWindowRateLimiter } from './rate-limiter.js';
 
 export type AssistantStatus = {
@@ -151,6 +155,18 @@ export class AssistantService implements OnApplicationBootstrap {
       opportunities: this.opportunities,
       followUps: this.followUps,
       searchKnowledge: (query) => this.search(query),
+    }).catch((error: unknown) => {
+      if (!(error instanceof LlmUnavailableError)) throw error;
+      // Sobrecarga/timeout do provedor já esgotou as novas tentativas.
+      this.logger.warn(error.message);
+      throw new HttpException(
+        {
+          error: 'ASSISTANT_UNAVAILABLE',
+          message:
+            'O provedor de IA está sobrecarregado agora. Tente de novo em alguns segundos; o restante do CRM segue funcionando.',
+        },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     });
 
     await this.record(reply).catch((error: unknown) =>

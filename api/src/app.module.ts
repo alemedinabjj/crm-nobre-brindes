@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AssistantController } from './assistant/assistant.controller.js';
@@ -20,6 +20,8 @@ import { HealthController } from './health/health.controller.js';
 import { MetaController } from './meta/meta.controller.js';
 import { OpportunitiesController } from './opportunities/opportunities.controller.js';
 import { OpportunitiesService } from './opportunities/opportunities.service.js';
+
+const retryLogger = new Logger('GeminiProvider');
 
 @Module({
   imports: [ConfigModule, DatabaseModule, ScheduleModule.forRoot()],
@@ -44,9 +46,14 @@ import { OpportunitiesService } from './opportunities/opportunities.service.js';
           ? new GeminiProvider({
               apiKey: config.GEMINI_API_KEY,
               chatModel: config.GEMINI_CHAT_MODEL,
+              fallbackChatModels: config.GEMINI_FALLBACK_MODELS,
               embeddingModel: config.GEMINI_EMBEDDING_MODEL,
               embeddingDimensions: EMBEDDING_DIMENSIONS,
-              timeoutMs: 30_000,
+              timeoutMs: 25_000,
+              onRetry: ({ model, error }) =>
+                retryLogger.warn(
+                  `Gemini falhou em ${model}, tentando de novo: ${error instanceof Error ? error.message.slice(0, 200) : String(error)}`,
+                ),
             })
           : null,
     },

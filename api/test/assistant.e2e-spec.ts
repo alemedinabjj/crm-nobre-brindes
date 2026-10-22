@@ -7,11 +7,12 @@ import {
   FakeLlmProvider,
   type ScriptedTurn,
 } from '../src/assistant/llm/fake.provider.js';
-import type {
-  EmbeddingPurpose,
-  GenerateRequest,
-  LlmProvider,
-  ToolCall,
+import {
+  LlmUnavailableError,
+  type EmbeddingPurpose,
+  type GenerateRequest,
+  type LlmProvider,
+  type ToolCall,
 } from '../src/assistant/llm/llm-provider.js';
 import { SYSTEM_PROMPT_CANARY } from '../src/assistant/guardrails/output-guard.js';
 import { assistantInteractions } from '../src/database/schema.js';
@@ -313,6 +314,18 @@ describe('assistente: guardrails e limites', () => {
     expect(response.body.outcome).toBe('limit_reached');
     expect(provider.requests).toHaveLength(5);
     expect(response.body.answer).toContain('Não consegui concluir');
+  });
+
+  it('provedor sobrecarregado vira 503 com mensagem clara, não 500', async () => {
+    const response = await ask('oi', [
+      () => {
+        throw new LlmUnavailableError(
+          'Gemini indisponível após 4 tentativa(s)',
+        );
+      },
+    ]).expect(503);
+    expect(response.body.error).toBe('ASSISTANT_UNAVAILABLE');
+    expect(response.body.message).toContain('sobrecarregado');
   });
 
   it('troca a resposta se o modelo vazar o prompt de sistema', async () => {
