@@ -1,0 +1,62 @@
+name: Evals do assistente
+
+# Roda o assistente de verdade (Gemini) contra a API recém-subida com os dados
+# do case. Manual ou semanal, porque consome cota do provedor de IA.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 11 * * 1'
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: crm_nobre
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: api
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/crm_nobre
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      REFERENCE_DATE: '2026-10-15'
+      FOLLOW_UP_CRON: ''
+      ASSISTANT_RATE_LIMIT: '500'
+      EVAL_API_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      - name: Verificar segredo
+        run: test -n "$GEMINI_API_KEY" || (echo "Configure o segredo GEMINI_API_KEY no repositório." && exit 1)
+      - run: npm ci
+      - run: npm run build
+      - run: npm run db:reset
+      - run: npm run kb:sync
+      - name: Subir API
+        run: |
+          nohup node dist/main.js > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3001/health && break; sleep 2; done
+      - name: Rodar evals (recuperação + agente + juiz)
+        run: npm run eval -- --judge
+      - name: Publicar relatório
+        if: always()
+        run: cat evals/reports/online-latest.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorio-evals
+          path: |
+            api/evals/reports/
+            api/api.log
