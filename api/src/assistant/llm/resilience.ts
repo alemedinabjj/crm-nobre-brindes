@@ -5,7 +5,8 @@
  * 429 quando a cota do minuto estoura. São falhas passageiras: vale tentar de
  * novo com espera crescente e, se o modelo principal seguir indisponível,
  * cair para um modelo reserva. Erros 4xx de requisição (400, 401, 403, 404)
- * não melhoram com nova tentativa e sobem na hora.
+ * não melhoram com nova tentativa e sobem na hora. A exceção é o 404 de
+ * modelo: o Google aposenta modelos, então um reserva que sumiu é pulado.
  */
 
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
@@ -24,6 +25,10 @@ export const isRetryable = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error);
   return RETRYABLE_MESSAGE.test(message);
 };
+
+/** Modelo inexistente ou aposentado: não adianta repetir, mas há outros na fila. */
+export const isModelMissing = (error: unknown): boolean =>
+  errorStatus(error) === 404;
 
 export type RetryPolicy = {
   /** Tentativas por modelo (a primeira inclusa). */
@@ -66,10 +71,12 @@ export const withModelFallback = async <T>(
       try {
         return await call(model);
       } catch (error) {
-        if (!isRetryable(error)) throw error;
+        const missing = isModelMissing(error);
+        if (!missing && !isRetryable(error)) throw error;
         const attempt = { model, error };
         attempts.push(attempt);
         options.onRetry?.(attempt);
+        if (missing) break;
       }
     }
   }

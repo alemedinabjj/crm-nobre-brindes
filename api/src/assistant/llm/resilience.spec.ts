@@ -54,6 +54,23 @@ describe('withModelFallback', () => {
     await expect(run(['a', 'b'], call)).rejects.toThrow('4 tentativas');
   });
 
+  it('pula modelo reserva aposentado (404) e segue para o próximo', async () => {
+    const call = vi.fn((model: string) => {
+      if (model === 'principal') return Promise.reject(apiError(503));
+      if (model === 'aposentado') return Promise.reject(apiError(404));
+      return Promise.resolve(model);
+    });
+    await expect(
+      run(['principal', 'aposentado', 'vigente'], call),
+    ).resolves.toBe('vigente');
+    expect(call.mock.calls.map(([model]) => model)).toEqual([
+      'principal',
+      'principal',
+      'aposentado',
+      'vigente',
+    ]);
+  });
+
   it('erro não recuperável sobe na hora, sem fallback', async () => {
     const call = vi.fn(() => Promise.reject(apiError(400)));
     await expect(run(['a', 'b'], call)).rejects.toThrow('erro 400');

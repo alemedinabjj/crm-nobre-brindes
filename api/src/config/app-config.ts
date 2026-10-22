@@ -28,7 +28,7 @@ const envSchema = z.object({
   /** Reservas, em ordem, quando o modelo principal está sobrecarregado (503/504/429). */
   GEMINI_FALLBACK_MODELS: z
     .string()
-    .default('gemini-2.5-flash,gemini-flash-lite-latest')
+    .default('gemini-flash-lite-latest,gemini-3.8-flash')
     .transform((value) =>
       value
         .split(',')
