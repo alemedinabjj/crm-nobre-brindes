@@ -1,6 +1,6 @@
 "use client";
 
-import { BellRing } from "lucide-react";
+import { BellRing, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useBoardFilters } from "@/hooks/use-board-filters";
 import { useFollowUps } from "@/hooks/use-follow-ups";
@@ -8,6 +8,7 @@ import { useMeta, useOpportunities } from "@/hooks/use-opportunities";
 import { AppHeader } from "../layout/app-header";
 import { FilterBar } from "../filters/filter-bar";
 import { OpportunityDrawer } from "../detail/opportunity-drawer";
+import { AssistantPanel } from "../assistant/assistant-panel";
 import { FollowUpsDrawer } from "../follow-ups/follow-ups-drawer";
 import { useStageMove } from "../stage-move/use-stage-move";
 import { AttentionPanel } from "./attention-panel";
@@ -18,8 +19,10 @@ export const CrmBoard = () => {
   const board = useBoardFilters();
   const meta = useMeta();
   const opportunities = useOpportunities(board.filters);
-  const { requestMove, dialog, isMoving } = useStageMove({ onOpenDetail: board.openOpportunity });
-  const [panel, setPanel] = useState<"follow-ups" | null>(null);
+  const { requestMove, dialog, isMoving } = useStageMove({
+    onOpenDetail: board.openOpportunity,
+  });
+  const [panel, setPanel] = useState<"follow-ups" | "assistant" | null>(null);
   const followUps = useFollowUps(board.filters.seller);
   const pendingFollowUps = followUps.data?.length ?? 0;
 
@@ -42,11 +45,20 @@ export const CrmBoard = () => {
     const list = opportunities.data;
     if (meta.isPending || !list) return <BoardSkeleton />;
     if (list.length === 0) {
-      return <BoardEmpty hasFilters={board.hasActiveFilters} onClear={board.clearFilters} />;
+      return (
+        <BoardEmpty
+          hasFilters={board.hasActiveFilters}
+          onClear={board.clearFilters}
+        />
+      );
     }
     return (
       <>
-        <AttentionPanel opportunities={list} stages={stages} onOpen={board.openOpportunity} />
+        <AttentionPanel
+          opportunities={list}
+          stages={stages}
+          onOpen={board.openOpportunity}
+        />
         <div className="mt-4" aria-busy={opportunities.isFetching}>
           <KanbanBoard
             opportunities={list}
@@ -65,17 +77,29 @@ export const CrmBoard = () => {
       <AppHeader
         today={meta.data?.today}
         actions={
-          <button
-            type="button"
-            onClick={() => setPanel("follow-ups")}
-            className="inline-flex items-center gap-1.5 rounded-full bg-forest-deep px-3 py-1.5 text-xs font-semibold text-white hover:bg-forest"
-          >
-            <BellRing className="size-3.5" aria-hidden />
-            Retornos
-            {pendingFollowUps > 0 && (
-              <span className="tabular rounded-full bg-lime px-1.5 text-[11px] text-forest-deep">{pendingFollowUps}</span>
-            )}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setPanel("assistant")}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-semibold text-forest-deep hover:bg-white"
+            >
+              <Sparkles className="size-3.5" aria-hidden />
+              Assistente
+            </button>
+            <button
+              type="button"
+              onClick={() => setPanel("follow-ups")}
+              className="inline-flex items-center gap-1.5 rounded-full bg-forest-deep px-3 py-1.5 text-xs font-semibold text-white hover:bg-forest"
+            >
+              <BellRing className="size-3.5" aria-hidden />
+              Retornos
+              {pendingFollowUps > 0 && (
+                <span className="tabular rounded-full bg-lime px-1.5 text-[11px] text-forest-deep">
+                  {pendingFollowUps}
+                </span>
+              )}
+            </button>
+          </>
         }
       />
       <div className="border-b border-line bg-white">
@@ -107,6 +131,11 @@ export const CrmBoard = () => {
           setPanel(null);
           board.openOpportunity(id);
         }}
+      />
+      <AssistantPanel
+        open={panel === "assistant"}
+        seller={board.filters.seller}
+        onClose={() => setPanel(null)}
       />
       {dialog}
     </div>

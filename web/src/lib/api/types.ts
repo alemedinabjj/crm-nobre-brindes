@@ -117,3 +117,52 @@ export type AutomationRun = {
   startedAt: string;
   finishedAt: string | null;
 };
+
+export type AssistantCitation = {
+  number: number;
+  chunkId: string;
+  documentTitle: string;
+  section: string;
+  excerpt: string;
+  cited: boolean;
+};
+
+export type AssistantAction =
+  | {
+      type: "CHANGE_STAGE";
+      opportunityId: string;
+      opportunityCode: string;
+      companyName: string;
+      fromStage: Stage;
+      toStage: Stage;
+      reason: string | null;
+      requiresReason: boolean;
+      summary: string;
+    }
+  | {
+      type: "REGISTER_CONTACT";
+      opportunityId: string;
+      opportunityCode: string;
+      companyName: string;
+      summary: string;
+    };
+
+export type AssistantReply = {
+  answer: string;
+  outcome: "answered" | "blocked" | "limit_reached";
+  citations: AssistantCitation[];
+  toolCalls: { name: string; ok: boolean; durationMs: number }[];
+  proposedActions: AssistantAction[];
+  guardrailFlags: string[];
+  usage: { inputTokens: number; outputTokens: number };
+  model: string;
+  latencyMs: number;
+};
+
+export type AssistantStatus = {
+  enabled: boolean;
+  provider: string | null;
+  chatModel: string | null;
+  embeddingModel: string | null;
+  knowledge: { chunks: number; withEmbedding: number; mode: "hybrid" | "keyword-only" };
+};

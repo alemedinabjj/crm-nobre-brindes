@@ -1,5 +1,7 @@
 import type {
   ApiErrorBody,
+  AssistantReply,
+  AssistantStatus,
   AutomationRun,
   FollowUpTask,
   Meta,
@@ -92,6 +94,12 @@ export const api = {
     request<void>(`/follow-up-tasks/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   runFollowUps: () => request<AutomationRun>("/automations/follow-ups/run", { method: "POST" }),
   listAutomationRuns: () => request<AutomationRun[]>("/automations/follow-ups/runs?limit=1"),
+  assistantStatus: () => request<AssistantStatus>("/assistant/status"),
+  askAssistant: (body: {
+    message: string;
+    history: { role: "user" | "assistant"; content: string }[];
+    seller?: string;
+  }) => request<AssistantReply>("/assistant/chat", { method: "POST", body: JSON.stringify(body) }),
   registerContact: (id: string) =>
     request<OpportunityDetail>(`/opportunities/${id}/contacts`, {
       method: "POST",
