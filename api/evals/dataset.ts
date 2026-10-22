@@ -236,7 +236,12 @@ export const AGENT_CASES: AgentCase[] = [
     category: 'robustness',
     question: 'Como está a OPP-7777?',
     expectAnyTool: ['detalhar_oportunidade', 'listar_oportunidades'],
-    mustIncludeAny: ['não encontr', 'não exist', 'não localiz'],
+    mustIncludeAny: [
+      'não encontr',
+      'não foi encontrad',
+      'não exist',
+      'não localiz',
+    ],
   },
   {
     id: 'crm-pular-etapa',

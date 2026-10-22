@@ -371,7 +371,7 @@ Testes conferem comportamento determinístico. **Evals medem a qualidade do sist
 
 **1. Recuperação (RAG).** São 20 perguntas com documento e seção esperados. Seis delas são **paráfrases sem palavra em comum** com o trecho certo, como "Quanto tempo demora para chegar em Recife?", cuja resposta está em "Frete e entrega: Norte e Nordeste". Métricas: hit@1, hit@4 (documento e seção), MRR e acerto nas paráfrases.
 
-**2. Agente.** São 29 casos em seis categorias:
+**2. Agente.** São 28 casos em seis categorias:
 
 | Categoria | Exemplos do que se verifica |
 | --- | --- |
@@ -390,9 +390,33 @@ As métricas são: casos aprovados, segurança (meta de 100%), escolha de ferram
 | --- | --- | --- | --- | --- | --- |
 | Só palavra-chave (offline, sem IA) | 75% | 90% | 94% | 0,80 | 67% |
 
-<!-- resultados online -->
-
 Os erros da busca por palavra-chave são justamente as perguntas sem palavra em comum com o trecho ("o contato disse que precisa consultar a diretoria", "chegou peça com defeito"). É a lacuna que o embedding semântico existe para fechar, e o eval online mede quanto ela fecha.
+
+Contra a **API publicada** (Gemini de verdade, `gemini-flash-lite-latest`, embeddings `gemini-embedding-001`), a busca híbrida fecha essa lacuna:
+
+| Modo | hit@1 | hit@4 | seção hit@4 | MRR | paráfrases hit@4 |
+| --- | --- | --- | --- | --- | --- |
+| Híbrida (semântica + palavra-chave, online) | 95% | 100% | 100% | 0,98 | 100% |
+
+O único caso fora do 1º lugar ("o contato disse que precisa consultar a diretoria") achou o trecho certo em 2º.
+
+E o agente, nas mesmas condições:
+
+| Métrica | Resultado | Meta |
+| --- | --- | --- |
+| Casos aprovados | 93% (26/28) | 85% |
+| Segurança (injection, segredos, CPF, vazamento) | 100% | 100% |
+| Escolha de ferramenta | 100% | 85% |
+| Respostas de base com citação válida | 100% | 90% |
+| Latência p50 / p95 | 1,5 s / 2,4 s | p95 ≤ 20 s |
+| Tokens por pergunta (média) | 2.663 | |
+
+As duas falhas, sem maquiagem:
+
+- `crm-minhas`: "quais são as minhas negociações em aberto?" (vendedora Ana). O modelo listou só a urgente (OPP-2003) e deixou de fora a OPP-2001, que está em dia. É um erro real de interpretação do modelo leve. O caminho é deixar mais explícito na descrição da ferramenta que "em aberto" não é sinônimo de "precisa de atenção".
+- `crm-inexistente`: a resposta estava certa ("A OPP-7777 não foi encontrada"), mas o verificador só aceitava "não encontr…". O erro era do eval, que já foi corrigido no dataset.
+
+Esta rodada foi sem o juiz de fidelidade, que precisa do segredo `GEMINI_API_KEY` no GitHub Actions. Ele entra no workflow semanal.
 
 O workflow **Evals do assistente** (manual ou semanal) sobe a API com os dados do case, sincroniza a base com o Gemini e roda as duas suítes com o juiz. O relatório completo, com cada falha, sai no resumo do job e como artefato.
 
