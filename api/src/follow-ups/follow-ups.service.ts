@@ -29,7 +29,7 @@ import type {
 } from './follow-up.schemas.js';
 
 export const FOLLOW_UP_AUTOMATION = 'follow-up-reminders';
-export type RunTrigger = 'schedule' | 'cron' | 'manual';
+export type RunTrigger = 'schedule' | 'cron' | 'manual' | 'startup';
 
 export type RunSummary = {
   id: string;
@@ -204,6 +204,29 @@ export class FollowUpsService {
       `Follow-up (${trigger}) em ${summary.referenceDate}: ${summary.createdCount} criada(s), ${summary.canceledCount} cancelada(s).`,
     );
     return summary;
+  }
+
+  /**
+   * Execução de recuperação: se a API estava fora do ar (ou hibernando) no
+   * horário agendado, roda ao subir. Só em dia útil e só se ainda não houve
+   * execução para a data de hoje.
+   */
+  async runIfMissed(): Promise<RunSummary | null> {
+    const today = this.clock.today();
+    const weekday = today.getUTCDay();
+    if (weekday === 0 || weekday === 6) return null;
+
+    const [existing] = await this.db
+      .select({ id: automationRuns.id })
+      .from(automationRuns)
+      .where(
+        and(
+          eq(automationRuns.automation, FOLLOW_UP_AUTOMATION),
+          eq(automationRuns.referenceDate, formatCalendarDate(today)),
+        ),
+      )
+      .limit(1);
+    return existing ? null : this.run('startup');
   }
 
   async listRuns(limit = 10): Promise<RunSummary[]> {

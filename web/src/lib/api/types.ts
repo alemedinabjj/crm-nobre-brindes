@@ -110,7 +110,7 @@ export type FollowUpTask = {
 
 export type AutomationRun = {
   id: string;
-  trigger: "schedule" | "cron" | "manual";
+  trigger: "schedule" | "cron" | "manual" | "startup";
   referenceDate: string;
   createdCount: number;
   canceledCount: number;

@@ -67,9 +67,16 @@ const isEntryPoint =
 
 if (isEntryPoint) {
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const onlyIfEmpty = process.argv.includes('--if-empty');
   try {
-    await seedDatabase(drizzle(pool));
-    console.log(`${SEED_OPPORTUNITIES.length} oportunidades carregadas.`);
+    const db = drizzle(pool);
+    // Em hospedagem que reinicia o processo, recarregar apagaria o que foi feito na demo.
+    if (onlyIfEmpty && (await db.$count(opportunities)) > 0) {
+      console.log('Banco já tem oportunidades: carga inicial ignorada.');
+    } else {
+      await seedDatabase(db);
+      console.log(`${SEED_OPPORTUNITIES.length} oportunidades carregadas.`);
+    }
   } finally {
     await pool.end();
   }

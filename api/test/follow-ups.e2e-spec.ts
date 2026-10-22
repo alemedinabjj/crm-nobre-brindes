@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { FollowUpsService } from '../src/follow-ups/follow-ups.service.js';
 import { setupTestApp, type TestContext } from './setup-test-app.js';
 
 type Task = {
@@ -189,5 +190,14 @@ describe('segredo da automação', () => {
       .set('x-automation-secret', 'segredo-do-cron')
       .expect(200);
     expect(ok.body.trigger).toBe('cron');
+  });
+});
+
+describe('execução de recuperação', () => {
+  it('roda ao subir se ainda não houve execução hoje, e só uma vez', async () => {
+    const service = ctx.app.get(FollowUpsService);
+    const first = await service.runIfMissed();
+    expect(first).toMatchObject({ trigger: 'startup', createdCount: 3 });
+    expect(await service.runIfMissed()).toBeNull();
   });
 });

@@ -11,4 +11,4 @@ ENV NODE_ENV=production
 EXPOSE 3001
 
 # Aplica migrations a cada subida; o seed só roda quando SEED_ON_START=true.
-CMD ["sh", "-c", "npm run db:migrate && if [ \"$SEED_ON_START\" = \"true\" ]; then npm run db:seed; fi && node dist/main.js"]
+CMD ["sh", "-c", "npm run db:migrate && if [ \"$SEED_ON_START\" = \"true\" ]; then npm run db:seed -- --if-empty; fi && node dist/main.js"]

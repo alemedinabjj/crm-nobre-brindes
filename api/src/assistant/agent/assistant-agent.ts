@@ -144,18 +144,16 @@ export const runAssistant = async (
   });
 
   const messages: AgentMessage[] = [
-    ...history
-      .slice(-AGENT_LIMITS.historyTurns)
-      .map((turn): AgentMessage =>
-        turn.role === 'user'
-          ? {
-              role: 'user',
-              text: inspectInput(turn.content).allowed
-                ? turn.content
-                : '[mensagem removida]',
-            }
-          : { role: 'assistant', text: turn.content, toolCalls: [] },
-      ),
+    ...history.slice(-AGENT_LIMITS.historyTurns).map((turn): AgentMessage =>
+      turn.role === 'user'
+        ? {
+            role: 'user',
+            text: inspectInput(turn.content).allowed
+              ? turn.content
+              : '[mensagem removida]',
+          }
+        : { role: 'assistant', text: turn.content, toolCalls: [] },
+    ),
     { role: 'user', text: input.text },
   ];
 

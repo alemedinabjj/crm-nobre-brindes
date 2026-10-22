@@ -22,6 +22,7 @@ const TRIGGER_LABEL: Record<AutomationRun["trigger"], string> = {
   schedule: "agenda da API",
   cron: "cron diário",
   manual: "disparo manual",
+  startup: "recuperação ao iniciar a API",
 };
 
 const groups = (tasks: FollowUpTask[]) => [

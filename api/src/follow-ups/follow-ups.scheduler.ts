@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnApplicationBootstrap,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
@@ -10,7 +16,9 @@ import { FollowUpsService } from './follow-ups.service.js';
  * que hiberna o processo, o Cron da Vercel cobre o disparo (ver README).
  */
 @Injectable()
-export class FollowUpsScheduler implements OnModuleInit {
+export class FollowUpsScheduler
+  implements OnModuleInit, OnApplicationBootstrap
+{
   private readonly logger = new Logger(FollowUpsScheduler.name);
 
   constructor(
@@ -42,5 +50,23 @@ export class FollowUpsScheduler implements OnModuleInit {
     this.logger.log(
       `Follow-up agendado: "${this.config.FOLLOW_UP_CRON}" (${this.config.TZ_OPERACAO}).`,
     );
+  }
+
+  onApplicationBootstrap(): void {
+    if (!this.config.FOLLOW_UP_CRON) return;
+    this.followUps
+      .runIfMissed()
+      .then((run) => {
+        if (run)
+          this.logger.log(
+            `Execução de recuperação feita: ${run.createdCount} retorno(s) criado(s).`,
+          );
+      })
+      .catch((error: unknown) =>
+        this.logger.error(
+          'Falha na execução de recuperação',
+          error instanceof Error ? error.stack : error,
+        ),
+      );
   }
 }
