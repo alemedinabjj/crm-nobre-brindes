@@ -33,6 +33,9 @@ export type GeminiOptions = {
   onRetry?: (attempt: Attempt) => void;
 };
 
+/** Valor documentado pelo Gemini para chamadas que não vieram do próprio modelo. */
+export const FOREIGN_THOUGHT_SIGNATURE = 'skip_thought_signature_validator';
+
 /** Conteúdo cru guardado junto do modelo que o produziu. */
 type ProviderContent = { model: string; content: Content };
 
@@ -68,6 +71,9 @@ export const toContents = (
       for (const call of message.toolCalls) {
         parts.push({
           functionCall: { id: call.id, name: call.name, args: call.args },
+          // Chamada vinda de outro modelo (fallback): não há assinatura válida
+          // para este. O Gemini documenta este valor para esse caso.
+          thoughtSignature: FOREIGN_THOUGHT_SIGNATURE,
         });
       }
       return { role: 'model', parts };
@@ -98,6 +104,18 @@ const readText = (response: GenerateContentResponse): string => {
     .map((part) => part.text)
     .join('')
     .trim();
+};
+
+const stickyModel = (messages: AgentMessage[]): string | undefined => {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (
+      message?.role === 'assistant' &&
+      isProviderContent(message.providerContent)
+    )
+      return message.providerContent.model;
+  }
+  return undefined;
 };
 
 const providerContentOf = (
@@ -140,9 +158,22 @@ export class GeminiProvider implements LlmProvider {
     ];
   }
 
+  /**
+   * Ordem de tentativa para esta chamada: se um turno anterior desta pergunta
+   * já foi respondido por um modelo, ele vem primeiro. Assim a conversa com
+   * ferramentas segue no mesmo modelo e as assinaturas continuam válidas.
+   */
+  modelOrderFor(messages: AgentMessage[]): string[] {
+    const models = this.chatModels;
+    const sticky = stickyModel(messages);
+    return sticky && models.includes(sticky)
+      ? [sticky, ...models.filter((model) => model !== sticky)]
+      : models;
+  }
+
   async generate(request: GenerateRequest): Promise<GenerateResponse> {
     return withModelFallback(
-      this.chatModels,
+      this.modelOrderFor(request.messages),
       (model) => this.generateWith(model, request),
       {
         policy: this.options.retryPolicy,

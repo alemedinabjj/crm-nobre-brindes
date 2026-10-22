@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { toContents } from './gemini.provider.js';
+import {
+  FOREIGN_THOUGHT_SIGNATURE,
+  GeminiProvider,
+  toContents,
+} from './gemini.provider.js';
 import { LlmUnavailableError } from './llm-provider.js';
 import { isRetryable, withModelFallback } from './resilience.js';
 
@@ -106,7 +110,37 @@ describe('toContents', () => {
     const rebuilt = toContents(history, 'reserva')[1];
     expect(rebuilt).toEqual({
       role: 'model',
-      parts: [{ functionCall: { id: 'c1', name: 'resumo_funil', args: {} } }],
+      parts: [
+        {
+          functionCall: { id: 'c1', name: 'resumo_funil', args: {} },
+          thoughtSignature: FOREIGN_THOUGHT_SIGNATURE,
+        },
+      ],
     });
+  });
+
+  it('mantém a conversa no modelo que já respondeu o turno anterior', () => {
+    const provider = new GeminiProvider({
+      apiKey: 'teste',
+      chatModel: 'principal',
+      fallbackChatModels: ['reserva', 'outro'],
+      embeddingModel: 'emb',
+      embeddingDimensions: 768,
+      timeoutMs: 1000,
+    });
+    const fromReserve = [
+      history[0]!,
+      { ...history[1]!, providerContent: { model: 'reserva', content: raw } },
+    ];
+    expect(provider.modelOrderFor(fromReserve)).toEqual([
+      'reserva',
+      'principal',
+      'outro',
+    ]);
+    expect(provider.modelOrderFor([history[0]!])).toEqual([
+      'principal',
+      'reserva',
+      'outro',
+    ]);
   });
 });

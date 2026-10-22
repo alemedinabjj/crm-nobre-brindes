@@ -325,7 +325,7 @@ As ferramentas reaproveitam os serviços da API: o assistente enxerga exatamente
 | Prompt | Tom, escopo, "consulte antes de afirmar", "cite as fontes", "ações só propostas" | Regras curtas e verificáveis, cada uma coberta por guardrail ou eval |
 | Contexto | Instruções escondidas em documentos ou dados | Resultado de ferramenta é declarado como dado; trecho da base com cara de injection é descartado |
 | Execução | Loop infinito, custo, ferramenta inexistente | Até 5 chamadas ao modelo e 8 ferramentas por pergunta; lista fechada; argumentos validados; saída truncada |
-| Disponibilidade | Gemini sobrecarregado (503), deadline (504), cota (429) | Nova tentativa com espera crescente e queda para modelos reserva (`GEMINI_FALLBACK_MODELS`; modelo aposentado, 404, é pulado); as thought signatures só são reenviadas ao modelo que as gerou. Esgotado, responde 503 com mensagem clara e o CRM segue normal |
+| Disponibilidade | Gemini sobrecarregado (503), deadline (504), cota (429) | Nova tentativa com espera crescente e queda para modelos reserva (`GEMINI_FALLBACK_MODELS`; modelo aposentado, 404, é pulado); a conversa fica no modelo que já respondeu e as thought signatures só são reenviadas a quem as gerou. Esgotado, responde 503 com mensagem clara e o CRM segue normal |
 | Saída | Citação inventada | `[n]` que não corresponde a uma fonte recuperada é removido |
 | Saída | Oportunidade inventada | `OPP-XXXX` que não veio das ferramentas nem da pergunta recebe aviso visível |
 | Saída | Vazamento | Segredos (chave Google, URL de banco, senha Neon) são removidos; uma **canary** no prompt de sistema detecta vazamento do prompt e troca a resposta |
@@ -350,7 +350,7 @@ Toda pergunta fica em `assistant_interactions`, com a pergunta já mascarada, a 
 
 | Suíte | O que cobre | Testes |
 | --- | --- | --- |
-| API, unidade | Transições, atenção, planejador de follow-up, chunker, guardrails, novas tentativas do provedor | 112 |
+| API, unidade | Transições, atenção, planejador de follow-up, chunker, guardrails, novas tentativas do provedor | 113 |
 | API, e2e (Postgres real com pgvector) | Rotas do funil, concorrência, automação, RAG (ingestão e busca), agente com provedor roteirizado | 71 |
 | Front | Formatação, etapas, card, renderização das respostas da IA (inclusive tentativa de injetar HTML) | 22 |
 
